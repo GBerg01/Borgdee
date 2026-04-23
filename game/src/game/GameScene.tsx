@@ -54,20 +54,25 @@ export default function GameScene() {
   const playerSpawn = spawns[0]
   const botSpawns   = spawns.slice(1)
 
-  // ── Init tiles on mount ────────────────────────────────────────────────────
+  // ── Init tiles + start countdown in one effect so StrictMode can't split them
   useEffect(() => {
     initTiles(gridDef)
-  }, []) // eslint-disable-line
 
-  // ── Countdown ─────────────────────────────────────────────────────────────
-  useEffect(() => {
-    if (phase !== 'countdown') return
-    setCountdown(3)
-    const t3 = setTimeout(() => setCountdown(2), 1000)
-    const t2 = setTimeout(() => setCountdown(1), 2000)
-    const t1 = setTimeout(() => { setCountdown(0); setPhase('playing') }, 3000)
-    return () => { clearTimeout(t3); clearTimeout(t2); clearTimeout(t1) }
-  }, [phase]) // eslint-disable-line
+    // Countdown: 3 → 2 → 1 → playing
+    let n = 3
+    setCountdown(n)
+    const timer = setInterval(() => {
+      n -= 1
+      if (n > 0) {
+        setCountdown(n)
+      } else {
+        clearInterval(timer)
+        setPhase('playing')
+      }
+    }, 1000)
+
+    return () => clearInterval(timer)
+  }, []) // eslint-disable-line
 
   // ── Win detection: if only 1 alive and it's the player ───────────────────
   useEffect(() => {
