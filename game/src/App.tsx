@@ -1,10 +1,16 @@
-import { Suspense } from 'react'
+import { Suspense, useState, useCallback } from 'react'
 import { Canvas } from '@react-three/fiber'
 import { Sky } from '@react-three/drei'
 import GameScene from './game/GameScene'
 import HUD from './ui/HUD'
+import StartScreen from './ui/StartScreen'
+import CharacterBuilder from './ui/CharacterBuilder'
+import { useGameStore } from './store/gameStore'
 
-export default function App() {
+type AppPhase = 'start' | 'builder' | 'game'
+
+// ─── Game wrapper (resets store on mount) ─────────────────────────────────────
+function Game({ onRestart, onEditCharacter }: { onRestart: () => void; onEditCharacter: () => void }) {
   return (
     <div style={{ width: '100%', height: '100%', position: 'relative' }}>
       <Canvas
@@ -30,7 +36,49 @@ export default function App() {
           <GameScene />
         </Suspense>
       </Canvas>
-      <HUD />
+      <HUD onRestart={onRestart} onEditCharacter={onEditCharacter} />
     </div>
+  )
+}
+
+// ─── App ──────────────────────────────────────────────────────────────────────
+export default function App() {
+  const [appPhase, setAppPhase] = useState<AppPhase>('start')
+  // Use a key to force-remount the game scene for a clean restart
+  const [gameKey, setGameKey] = useState(0)
+  const resetGame = useGameStore((s) => s.resetGame)
+
+  const goToGame = useCallback(() => {
+    setAppPhase('game')
+  }, [])
+
+  const goToBuilder = useCallback(() => {
+    setAppPhase('builder')
+  }, [])
+
+  const handleRestart = useCallback(() => {
+    resetGame()
+    setGameKey(k => k + 1)
+    setAppPhase('game')
+  }, [resetGame])
+
+  const handleEditCharacter = useCallback(() => {
+    setAppPhase('builder')
+  }, [])
+
+  if (appPhase === 'start') {
+    return <StartScreen onPlay={goToBuilder} />
+  }
+
+  if (appPhase === 'builder') {
+    return <CharacterBuilder onPlay={goToGame} onBack={() => setAppPhase('start')} />
+  }
+
+  return (
+    <Game
+      key={gameKey}
+      onRestart={handleRestart}
+      onEditCharacter={handleEditCharacter}
+    />
   )
 }
