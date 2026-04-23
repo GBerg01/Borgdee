@@ -1,6 +1,5 @@
 import { Suspense, useState } from 'react'
 import { Canvas } from '@react-three/fiber'
-import { OrbitControls, Environment } from '@react-three/drei'
 import CharacterMesh from '../game/CharacterMesh'
 import {
   useCharacterStore,
@@ -9,100 +8,223 @@ import {
 } from '../store/characterStore'
 import type { BodyType, HeadShape, HatType, EyeType } from '../store/characterStore'
 
+// ─── Tab definitions ─────────────────────────────────────────────────────────
+type Tab = 'presets' | 'body' | 'colors' | 'hat' | 'head' | 'eyes'
+const TABS: { id: Tab; icon: string; label: string }[] = [
+  { id: 'presets', icon: '⭐', label: 'Presets'  },
+  { id: 'body',    icon: '🫃', label: 'Body'     },
+  { id: 'colors',  icon: '🎨', label: 'Colors'   },
+  { id: 'hat',     icon: '🎩', label: 'Hat'       },
+  { id: 'head',    icon: '😶', label: 'Head'      },
+  { id: 'eyes',    icon: '👁',  label: 'Eyes'      },
+]
+
 // ─── Styles ───────────────────────────────────────────────────────────────────
-const root: React.CSSProperties = {
-  width: '100%', height: '100%',
-  display: 'flex', flexDirection: 'column',
-  background: 'radial-gradient(ellipse at 30% 20%, #1a0830 0%, #0a0a0f 60%)',
-  color: '#fff', fontFamily: 'system-ui, sans-serif',
-  overflow: 'hidden',
+const S = {
+  root: {
+    width: '100%', height: '100%',
+    display: 'flex', flexDirection: 'column',
+    background: 'linear-gradient(160deg, #2d1b69 0%, #11003a 40%, #001a3a 100%)',
+    fontFamily: 'system-ui, sans-serif', color: '#fff',
+    overflow: 'hidden', userSelect: 'none',
+  } as React.CSSProperties,
+
+  // Top bar: tabs + play button
+  topBar: {
+    display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+    padding: '12px 20px 0',
+    flexShrink: 0, zIndex: 10,
+  } as React.CSSProperties,
+
+  tabGroup: {
+    display: 'flex', gap: '6px',
+  } as React.CSSProperties,
+
+  playBtn: {
+    background: 'linear-gradient(135deg, #ff6b35, #ff1f8e)',
+    border: 'none', borderRadius: '14px',
+    padding: '13px 32px', fontSize: '16px',
+    fontWeight: 800, color: '#fff', cursor: 'pointer',
+    boxShadow: '0 4px 20px rgba(255,80,150,0.4)',
+    letterSpacing: '0.5px',
+    transition: 'transform 0.1s',
+  } as React.CSSProperties,
+
+  backBtn: {
+    background: 'rgba(255,255,255,0.1)',
+    border: '1px solid rgba(255,255,255,0.15)',
+    borderRadius: '10px', padding: '8px 14px',
+    fontSize: '13px', color: 'rgba(255,255,255,0.7)',
+    cursor: 'pointer',
+  } as React.CSSProperties,
+
+  // Canvas area
+  canvasWrap: {
+    flex: 1, minHeight: 0,
+    position: 'relative',
+  } as React.CSSProperties,
+
+  // Name row over canvas
+  nameOverlay: {
+    position: 'absolute', top: '14px', left: 0, right: 0,
+    display: 'flex', justifyContent: 'center', zIndex: 5,
+    pointerEvents: 'none',
+  } as React.CSSProperties,
+
+  nameInner: {
+    display: 'flex', alignItems: 'center', gap: '8px',
+    background: 'rgba(0,0,0,0.45)',
+    backdropFilter: 'blur(8px)',
+    borderRadius: '100px', padding: '7px 16px',
+    pointerEvents: 'all',
+  } as React.CSSProperties,
+
+  nameInput: {
+    background: 'none', border: 'none', outline: 'none',
+    color: '#fff', fontSize: '15px', fontWeight: 700,
+    textAlign: 'center' as const, minWidth: '80px', maxWidth: '180px',
+  } as React.CSSProperties,
+
+  randBtn: {
+    background: 'none', border: 'none', cursor: 'pointer',
+    fontSize: '16px', lineHeight: 1,
+  } as React.CSSProperties,
+
+  // Bottom item picker
+  bottomPanel: {
+    flexShrink: 0,
+    background: 'rgba(0,0,0,0.5)',
+    backdropFilter: 'blur(12px)',
+    borderTop: '1px solid rgba(255,255,255,0.08)',
+    padding: '14px 20px 20px',
+    maxHeight: '42%',
+    overflowY: 'auto' as const,
+  } as React.CSSProperties,
+
+  itemGrid: {
+    display: 'flex', flexWrap: 'wrap', gap: '10px',
+    justifyContent: 'flex-start',
+  } as React.CSSProperties,
+} as const
+
+// ─── Tab button ───────────────────────────────────────────────────────────────
+function TabBtn({ tab, active, onClick }: { tab: typeof TABS[0]; active: boolean; onClick: () => void }) {
+  return (
+    <button
+      onClick={onClick}
+      style={{
+        display: 'flex', flexDirection: 'column', alignItems: 'center',
+        gap: '3px', padding: '10px 16px', borderRadius: '12px',
+        border: 'none', cursor: 'pointer', fontSize: '11px',
+        fontWeight: active ? 700 : 500,
+        background: active
+          ? 'linear-gradient(135deg, rgba(255,107,53,0.8), rgba(255,31,142,0.8))'
+          : 'rgba(255,255,255,0.1)',
+        color: active ? '#fff' : 'rgba(255,255,255,0.6)',
+        outline: active ? '2px solid rgba(255,107,53,0.6)' : '2px solid transparent',
+        transition: 'all 0.15s',
+        minWidth: '52px',
+      }}
+    >
+      <span style={{ fontSize: '20px', lineHeight: 1 }}>{tab.icon}</span>
+      <span style={{ letterSpacing: '0.3px' }}>{tab.label}</span>
+    </button>
+  )
 }
 
-const header: React.CSSProperties = {
-  display: 'flex', alignItems: 'center', justifyContent: 'space-between',
-  padding: '16px 28px', borderBottom: '1px solid rgba(255,255,255,0.07)',
-  flexShrink: 0,
+// ─── Item card ────────────────────────────────────────────────────────────────
+function ItemCard({
+  label, active, onClick, color, emoji,
+}: {
+  label: string; active: boolean; onClick: () => void
+  color?: string; emoji?: string
+}) {
+  return (
+    <button
+      onClick={onClick}
+      style={{
+        display: 'flex', flexDirection: 'column', alignItems: 'center',
+        justifyContent: 'center', gap: '6px',
+        width: '90px', height: '80px',
+        borderRadius: '14px', border: 'none', cursor: 'pointer',
+        background: active
+          ? 'linear-gradient(135deg, rgba(255,107,53,0.7), rgba(255,31,142,0.7))'
+          : 'rgba(255,255,255,0.08)',
+        outline: active ? '2px solid #ff6b35' : '2px solid transparent',
+        transition: 'all 0.12s',
+        position: 'relative',
+      }}
+    >
+      {color && (
+        <div style={{
+          width: '36px', height: '36px', borderRadius: '50%',
+          background: color,
+          boxShadow: active ? `0 0 12px ${color}` : 'none',
+        }} />
+      )}
+      {emoji && <span style={{ fontSize: '28px', lineHeight: 1 }}>{emoji}</span>}
+      {!color && !emoji && (
+        <span style={{ fontSize: '22px', lineHeight: 1, opacity: 0.6 }}>◻</span>
+      )}
+      <span style={{
+        fontSize: '11px', fontWeight: active ? 700 : 500,
+        color: active ? '#fff' : 'rgba(255,255,255,0.65)',
+        textAlign: 'center', lineHeight: 1.2, padding: '0 4px',
+      }}>
+        {label}
+      </span>
+      {active && (
+        <div style={{
+          position: 'absolute', top: '6px', right: '6px',
+          width: '8px', height: '8px', borderRadius: '50%',
+          background: '#ffcc00',
+        }} />
+      )}
+    </button>
+  )
 }
 
-const body: React.CSSProperties = {
-  display: 'flex', flex: 1, minHeight: 0,
+// ─── 3D Preview scene ─────────────────────────────────────────────────────────
+function PreviewScene({ build }: { build: ReturnType<typeof useCharacterStore>['build'] }) {
+  return (
+    <>
+      <color attach="background" args={['#00000000']} />
+      <ambientLight intensity={0.8} />
+      <directionalLight position={[4, 8, 5]} intensity={1.6} castShadow />
+      <pointLight position={[-3, 4, -3]} intensity={0.6} color="#aa66ff" />
+      <pointLight position={[3, 1, 3]}  intensity={0.4} color="#ff6633" />
+
+      {/* Platform hex */}
+      <mesh position={[0, -0.06, 0]} receiveShadow>
+        <cylinderGeometry args={[1.4, 1.3, 0.18, 6]} />
+        <meshStandardMaterial color="#c040a0" metalness={0.4} roughness={0.3} />
+      </mesh>
+      {/* Platform rim glow */}
+      <mesh position={[0, -0.13, 0]}>
+        <cylinderGeometry args={[1.45, 1.35, 0.06, 6]} />
+        <meshStandardMaterial color="#ff80d0" emissive="#ff40b0" emissiveIntensity={0.6} />
+      </mesh>
+
+      {/* Character — feet at y=0, so group at CAPSULE_HEIGHT/2 = 0.9 */}
+      <group position={[0, 0.9, 0]}>
+        <CharacterMesh build={build} preview />
+      </group>
+
+      {/* Floor shadow */}
+      <mesh rotation={[-Math.PI / 2, 0, 0]} position={[0, -0.14, 0]} receiveShadow>
+        <circleGeometry args={[2.5, 32]} />
+        <shadowMaterial opacity={0.3} />
+      </mesh>
+    </>
+  )
 }
 
-const previewPane: React.CSSProperties = {
-  width: '340px', flexShrink: 0,
-  display: 'flex', flexDirection: 'column',
-  alignItems: 'center', justifyContent: 'center',
-  borderRight: '1px solid rgba(255,255,255,0.07)',
-  padding: '16px',
-  gap: '12px',
-}
-
-const controlsPane: React.CSSProperties = {
-  flex: 1, overflowY: 'auto', padding: '20px 28px',
-  display: 'flex', flexDirection: 'column', gap: '20px',
-}
-
-const section: React.CSSProperties = {
-  display: 'flex', flexDirection: 'column', gap: '10px',
-}
-
-const label: React.CSSProperties = {
-  fontSize: '11px', fontWeight: 700, letterSpacing: '1.5px',
-  color: 'rgba(255,255,255,0.4)', textTransform: 'uppercase',
-}
-
-const chipRow: React.CSSProperties = {
-  display: 'flex', flexWrap: 'wrap', gap: '8px',
-}
-
-function chip(active: boolean): React.CSSProperties {
-  return {
-    padding: '7px 14px', borderRadius: '8px', fontSize: '13px',
-    fontWeight: active ? 700 : 500, cursor: 'pointer', border: 'none',
-    background: active ? 'rgba(255,107,53,0.85)' : 'rgba(255,255,255,0.08)',
-    color: active ? '#fff' : 'rgba(255,255,255,0.7)',
-    outline: active ? '2px solid #ff6b35' : '2px solid transparent',
-    transition: 'all 0.12s',
-  }
-}
-
-function swatchStyle(color: string, active: boolean): React.CSSProperties {
-  return {
-    width: '36px', height: '36px', borderRadius: '50%',
-    background: color, cursor: 'pointer', border: 'none',
-    outline: active ? '3px solid #fff' : '3px solid transparent',
-    outlineOffset: '2px', transition: 'outline 0.1s',
-  }
-}
-
-const nameRow: React.CSSProperties = {
-  display: 'flex', alignItems: 'center', gap: '10px',
-}
-
-const nameInput: React.CSSProperties = {
-  background: 'rgba(255,255,255,0.08)', border: '1px solid rgba(255,255,255,0.15)',
-  borderRadius: '8px', padding: '8px 12px', color: '#fff',
-  fontSize: '15px', fontWeight: 600, flex: 1, outline: 'none',
-}
-
-const playBtn: React.CSSProperties = {
-  background: 'linear-gradient(135deg, #ff6b35, #ff3399)',
-  border: 'none', borderRadius: '14px', padding: '14px 0',
-  fontSize: '17px', fontWeight: 800, color: '#fff', cursor: 'pointer',
-  width: '100%', letterSpacing: '0.5px', flexShrink: 0,
-}
-
-const randBtn: React.CSSProperties = {
-  background: 'rgba(255,255,255,0.08)', border: '1px solid rgba(255,255,255,0.12)',
-  borderRadius: '8px', padding: '6px 12px', color: 'rgba(255,255,255,0.7)',
-  fontSize: '13px', cursor: 'pointer',
-}
-
-// ─── Component ────────────────────────────────────────────────────────────────
+// ─── Main Component ───────────────────────────────────────────────────────────
 interface Props { onPlay: () => void; onBack: () => void }
 
 export default function CharacterBuilder({ onPlay, onBack }: Props) {
   const { build, setBuild, updateField } = useCharacterStore()
+  const [activeTab, setActiveTab] = useState<Tab>('presets')
   const [nameEdit, setNameEdit] = useState(build.name)
 
   function applyPreset(key: string) {
@@ -111,186 +233,198 @@ export default function CharacterBuilder({ onPlay, onBack }: Props) {
     setNameEdit(p.name)
   }
 
-  function doRandomize() {
+  function doRandom() {
     const rb = randomBuild()
     setBuild(rb)
     setNameEdit(rb.name)
   }
 
-  function commitName() {
-    updateField('name', nameEdit || randomName())
+  function commitName(v: string) {
+    const clean = v.trim() || randomName()
+    setNameEdit(clean)
+    updateField('name', clean)
   }
 
-  const BODY_LABELS: Record<BodyType, string> = {
-    normal: 'Normal', blob: 'Blob 🫃', tower: 'Tower 🏗',
-    stubby: 'Stubby', bulky: 'Bulky 💪', tiny: 'Tiny 🐣', bighead: 'Big Brain 🧠',
+  // ── Item lists per tab ──────────────────────────────────────────────────
+  const bodyTypes: BodyType[] = ['normal', 'blob', 'tower', 'stubby', 'bulky', 'tiny', 'bighead']
+  const BODY_EMOJI: Record<BodyType, string> = {
+    normal: '🧍', blob: '🫃', tower: '🏗', stubby: '🥔',
+    bulky: '💪', tiny: '🐣', bighead: '🧠',
   }
-  const HEAD_LABELS: Record<HeadShape, string> = { round: 'Round', square: 'Square', oval: 'Oval' }
-  const HAT_LABELS: Record<HatType, string> = {
-    none: 'None', tophat: 'Top Hat 🎩', crown: 'Crown 👑', antenna: 'Antenna 📡', helmet: 'Helmet ⛑',
+  const BODY_LABEL: Record<BodyType, string> = {
+    normal: 'Normal', blob: 'Blob', tower: 'Tower', stubby: 'Stubby',
+    bulky: 'Bulky', tiny: 'Tiny', bighead: 'Big Brain',
   }
-  const EYE_LABELS: Record<EyeType, string> = {
-    round: 'Round', angry: 'Angry 😠', wide: 'Wide 👀', dot: 'Dot •',
+  const HEAD_EMOJI: Record<HeadShape, string> = { round: '🔵', square: '🟥', oval: '🥚' }
+  const HAT_EMOJI:  Record<HatType,   string> = {
+    none: '❌', tophat: '🎩', crown: '👑', antenna: '📡', helmet: '⛑',
+  }
+  const EYE_EMOJI:  Record<EyeType,   string> = {
+    round: '👀', angry: '😠', wide: '😳', dot: '◉',
   }
 
   return (
-    <div style={root}>
-      {/* Header */}
-      <div style={header}>
-        <button onClick={onBack} style={{ background: 'none', border: 'none', color: 'rgba(255,255,255,0.4)', cursor: 'pointer', fontSize: '14px' }}>
-          ← Back
-        </button>
-        <div style={{ fontSize: '14px', fontWeight: 700, letterSpacing: '2px', color: 'rgba(255,255,255,0.6)', textTransform: 'uppercase' }}>
-          Character Builder
+    <div style={S.root}>
+      {/* ── Top bar: tabs + controls ── */}
+      <div style={S.topBar}>
+        <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+          <button style={S.backBtn} onClick={onBack}>← Back</button>
         </div>
-        <div style={{ width: 60 }} />
+
+        <div style={S.tabGroup}>
+          {TABS.map(tab => (
+            <TabBtn
+              key={tab.id}
+              tab={tab}
+              active={activeTab === tab.id}
+              onClick={() => setActiveTab(tab.id)}
+            />
+          ))}
+        </div>
+
+        <div style={{ display: 'flex', gap: '10px', alignItems: 'center' }}>
+          <button
+            style={{ ...S.backBtn, fontSize: '18px', padding: '8px 12px' }}
+            onClick={doRandom}
+            title="Randomize"
+          >
+            🎲
+          </button>
+          <button
+            style={S.playBtn}
+            onMouseEnter={e => (e.currentTarget.style.transform = 'scale(1.04)')}
+            onMouseLeave={e => (e.currentTarget.style.transform = 'scale(1)')}
+            onClick={onPlay}
+          >
+            PLAY! →
+          </button>
+        </div>
       </div>
 
-      <div style={body}>
-        {/* ── Left: 3D Preview ── */}
-        <div style={previewPane}>
-          <div style={{ width: '100%', height: '260px', borderRadius: '16px', overflow: 'hidden', background: 'rgba(255,255,255,0.04)' }}>
-            <Canvas camera={{ position: [0, 2.2, 5.5], fov: 38 }} gl={{ antialias: true }}>
-              <ambientLight intensity={0.7} />
-              <directionalLight position={[5, 8, 5]} intensity={1.4} />
-              <pointLight position={[-4, 3, -4]} intensity={0.5} color="#8866ff" />
-              <Suspense fallback={null}>
-                <group position={[0, -0.9, 0]}>
-                  <CharacterMesh build={build} preview />
-                </group>
-              </Suspense>
-              <OrbitControls enableZoom={false} enablePan={false} autoRotate autoRotateSpeed={0} target={[0, 0.9, 0]} />
-            </Canvas>
+      {/* ── 3D Canvas ── */}
+      <div style={S.canvasWrap}>
+        {/* Name overlay */}
+        <div style={S.nameOverlay}>
+          <div style={S.nameInner}>
+            <input
+              style={S.nameInput}
+              value={nameEdit}
+              onChange={e => setNameEdit(e.target.value)}
+              onBlur={e => commitName(e.target.value)}
+              onKeyDown={e => e.key === 'Enter' && commitName((e.target as HTMLInputElement).value)}
+              maxLength={24}
+              size={nameEdit.length || 8}
+            />
+            <button
+              style={S.randBtn}
+              onClick={() => { const n = randomName(); setNameEdit(n); updateField('name', n) }}
+              title="Random name"
+            >
+              🎲
+            </button>
           </div>
-
-          {/* Name */}
-          <div style={{ width: '100%' }}>
-            <div style={{ ...label, marginBottom: '6px' }}>Name</div>
-            <div style={nameRow}>
-              <input
-                style={nameInput}
-                value={nameEdit}
-                onChange={e => setNameEdit(e.target.value)}
-                onBlur={commitName}
-                onKeyDown={e => e.key === 'Enter' && commitName()}
-                maxLength={24}
-              />
-              <button style={randBtn} onClick={() => { const n = randomName(); setNameEdit(n); updateField('name', n) }}>
-                🎲
-              </button>
-            </div>
-          </div>
-
-          {/* Colour preview bar */}
-          <div style={{ display: 'flex', gap: '8px', width: '100%' }}>
-            {[build.palette.primary, build.palette.secondary, build.palette.accent].map((c, i) => (
-              <div key={i} style={{ flex: 1, height: '8px', borderRadius: '4px', background: c }} />
-            ))}
-          </div>
-
-          <button style={playBtn} onClick={onPlay}>Play! →</button>
         </div>
 
-        {/* ── Right: Controls ── */}
-        <div style={controlsPane}>
+        <Canvas
+          style={{ width: '100%', height: '100%' }}
+          camera={{ position: [0, 2.0, 4.5], fov: 42, near: 0.1, far: 100 }}
+          gl={{ antialias: true, alpha: true }}
+          shadows
+        >
+          <Suspense fallback={null}>
+            <PreviewScene build={build} />
+          </Suspense>
+        </Canvas>
+      </div>
 
-          {/* Presets */}
-          <div style={section}>
-            <div style={label}>Quick Presets</div>
-            <div style={chipRow}>
-              {Object.keys(PRESETS).map((key) => (
-                <button
-                  key={key}
-                  style={chip(build.name === PRESETS[key].name && build.bodyType === PRESETS[key].bodyType)}
-                  onClick={() => applyPreset(key)}
-                >
-                  {key}
-                </button>
-              ))}
-              <button style={{ ...chip(false), background: 'rgba(255,200,50,0.15)', color: '#ffcc00' }} onClick={doRandomize}>
-                🎲 Randomize
-              </button>
+      {/* ── Bottom item picker ── */}
+      <div style={S.bottomPanel}>
+        <div style={S.itemGrid}>
+
+          {/* PRESETS */}
+          {activeTab === 'presets' && Object.entries(PRESETS).map(([key, preset]) => (
+            <ItemCard
+              key={key}
+              label={key}
+              active={build.bodyType === preset.bodyType && build.palette.name === preset.palette.name && build.hat === preset.hat}
+              onClick={() => applyPreset(key)}
+              color={preset.palette.primary}
+            />
+          ))}
+
+          {/* BODY */}
+          {activeTab === 'body' && bodyTypes.map(bt => (
+            <ItemCard
+              key={bt}
+              label={BODY_LABEL[bt]}
+              active={build.bodyType === bt}
+              onClick={() => updateField('bodyType', bt)}
+              emoji={BODY_EMOJI[bt]}
+            />
+          ))}
+
+          {/* COLORS */}
+          {activeTab === 'colors' && PALETTES.map(p => (
+            <div
+              key={p.name}
+              onClick={() => updateField('palette', p)}
+              style={{
+                display: 'flex', flexDirection: 'column', alignItems: 'center',
+                gap: '5px', cursor: 'pointer',
+              }}
+            >
+              <div style={{
+                width: '58px', height: '58px', borderRadius: '14px',
+                background: `linear-gradient(135deg, ${p.primary} 40%, ${p.secondary})`,
+                outline: build.palette.name === p.name ? '3px solid #fff' : '3px solid transparent',
+                outlineOffset: '2px', transition: 'outline 0.1s',
+                boxShadow: build.palette.name === p.name ? `0 0 14px ${p.primary}` : 'none',
+              }} />
+              <div style={{
+                fontSize: '11px',
+                color: build.palette.name === p.name ? '#fff' : 'rgba(255,255,255,0.5)',
+                fontWeight: build.palette.name === p.name ? 700 : 400,
+              }}>
+                {p.name}
+              </div>
             </div>
-          </div>
+          ))}
 
-          <Divider />
+          {/* HAT */}
+          {activeTab === 'hat' && (['none', 'tophat', 'crown', 'antenna', 'helmet'] as HatType[]).map(h => (
+            <ItemCard
+              key={h}
+              label={h === 'none' ? 'None' : h === 'tophat' ? 'Top Hat' : h.charAt(0).toUpperCase() + h.slice(1)}
+              active={build.hat === h}
+              onClick={() => updateField('hat', h)}
+              emoji={HAT_EMOJI[h]}
+            />
+          ))}
 
-          {/* Body Type */}
-          <div style={section}>
-            <div style={label}>Body Type</div>
-            <div style={chipRow}>
-              {(Object.keys(BODY_SCALES) as BodyType[]).map((bt) => (
-                <button key={bt} style={chip(build.bodyType === bt)} onClick={() => updateField('bodyType', bt)}>
-                  {BODY_LABELS[bt]}
-                </button>
-              ))}
-            </div>
-          </div>
+          {/* HEAD */}
+          {activeTab === 'head' && (['round', 'square', 'oval'] as HeadShape[]).map(h => (
+            <ItemCard
+              key={h}
+              label={h.charAt(0).toUpperCase() + h.slice(1)}
+              active={build.headShape === h}
+              onClick={() => updateField('headShape', h)}
+              emoji={HEAD_EMOJI[h]}
+            />
+          ))}
 
-          {/* Colour Palette */}
-          <div style={section}>
-            <div style={label}>Color Palette</div>
-            <div style={{ display: 'flex', gap: '10px', flexWrap: 'wrap', alignItems: 'center' }}>
-              {PALETTES.map((p) => (
-                <div key={p.name} style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: '4px' }}>
-                  <button
-                    style={swatchStyle(p.primary, build.palette.name === p.name)}
-                    onClick={() => updateField('palette', p)}
-                    title={p.name}
-                  />
-                  <div style={{ display: 'flex', gap: '3px' }}>
-                    <div style={{ width: '8px', height: '8px', borderRadius: '50%', background: p.secondary }} />
-                    <div style={{ width: '8px', height: '8px', borderRadius: '50%', background: p.accent }} />
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
-
-          <Divider />
-
-          {/* Head Shape */}
-          <div style={section}>
-            <div style={label}>Head Shape</div>
-            <div style={chipRow}>
-              {(['round', 'square', 'oval'] as HeadShape[]).map((h) => (
-                <button key={h} style={chip(build.headShape === h)} onClick={() => updateField('headShape', h)}>
-                  {HEAD_LABELS[h]}
-                </button>
-              ))}
-            </div>
-          </div>
-
-          {/* Eyes */}
-          <div style={section}>
-            <div style={label}>Eyes</div>
-            <div style={chipRow}>
-              {(['round', 'angry', 'wide', 'dot'] as EyeType[]).map((e) => (
-                <button key={e} style={chip(build.eyeType === e)} onClick={() => updateField('eyeType', e)}>
-                  {EYE_LABELS[e]}
-                </button>
-              ))}
-            </div>
-          </div>
-
-          {/* Hat */}
-          <div style={section}>
-            <div style={label}>Hat</div>
-            <div style={chipRow}>
-              {(['none', 'tophat', 'crown', 'antenna', 'helmet'] as HatType[]).map((h) => (
-                <button key={h} style={chip(build.hat === h)} onClick={() => updateField('hat', h)}>
-                  {HAT_LABELS[h]}
-                </button>
-              ))}
-            </div>
-          </div>
+          {/* EYES */}
+          {activeTab === 'eyes' && (['round', 'angry', 'wide', 'dot'] as EyeType[]).map(e => (
+            <ItemCard
+              key={e}
+              label={e.charAt(0).toUpperCase() + e.slice(1)}
+              active={build.eyeType === e}
+              onClick={() => updateField('eyeType', e)}
+              emoji={EYE_EMOJI[e]}
+            />
+          ))}
 
         </div>
       </div>
     </div>
   )
-}
-
-function Divider() {
-  return <div style={{ height: '1px', background: 'rgba(255,255,255,0.07)', margin: '2px 0' }} />
 }
