@@ -4,6 +4,12 @@ export type BodyType  = 'normal' | 'blob' | 'tower' | 'stubby' | 'bulky' | 'tiny
 export type HeadShape = 'round' | 'square' | 'oval'
 export type HatType   = 'none' | 'tophat' | 'crown' | 'antenna' | 'helmet'
 export type EyeType   = 'round' | 'angry' | 'wide' | 'dot'
+export type TorsoType = 'classic' | 'barrel' | 'wedge' | 'pear'
+export type ArmType   = 'noodle' | 'mitt' | 'chunky' | 'robot'
+export type LegType   = 'tube' | 'stomp' | 'spring' | 'peg'
+export type FeetType  = 'sneakers' | 'boots' | 'flippers' | 'hooves'
+export type OutfitType = 'none' | 'wrestler' | 'plumber' | 'alien' | 'frog' | 'mascot'
+export type AccessoryType = 'none' | 'cape' | 'fanny' | 'floaty' | 'spikes' | 'bowtie'
 
 export interface ColorPalette {
   name: string
@@ -15,8 +21,14 @@ export interface ColorPalette {
 export interface CharacterBuild {
   name: string
   bodyType: BodyType
+  torso: TorsoType
+  arms: ArmType
+  legs: LegType
+  feet: FeetType
+  outfit: OutfitType
   headShape: HeadShape
   hat: HatType
+  accessory: AccessoryType
   eyeType: EyeType
   palette: ColorPalette
 }
@@ -52,43 +64,51 @@ export const PALETTES: ColorPalette[] = [
 export const PRESETS: Record<string, CharacterBuild> = {
   'The Blob': {
     name: 'The Blob',
+    torso: 'pear', arms: 'chunky', legs: 'stomp', feet: 'flippers', outfit: 'frog',
     bodyType: 'blob', headShape: 'round', hat: 'none',
-    eyeType: 'wide', palette: PALETTES[0],
+    accessory: 'floaty', eyeType: 'wide', palette: PALETTES[0],
   },
   'The Tower': {
     name: 'The Tower',
+    torso: 'wedge', arms: 'robot', legs: 'tube', feet: 'boots', outfit: 'none',
     bodyType: 'tower', headShape: 'oval', hat: 'antenna',
-    eyeType: 'dot', palette: PALETTES[1],
+    accessory: 'cape', eyeType: 'dot', palette: PALETTES[1],
   },
   'The Tank': {
     name: 'The Tank',
+    torso: 'barrel', arms: 'chunky', legs: 'stomp', feet: 'boots', outfit: 'wrestler',
     bodyType: 'bulky', headShape: 'square', hat: 'helmet',
-    eyeType: 'angry', palette: PALETTES[5],
+    accessory: 'spikes', eyeType: 'angry', palette: PALETTES[5],
   },
   'The Spud': {
     name: 'The Spud',
+    torso: 'pear', arms: 'mitt', legs: 'peg', feet: 'hooves', outfit: 'none',
     bodyType: 'stubby', headShape: 'round', hat: 'none',
-    eyeType: 'wide', palette: PALETTES[7],
+    accessory: 'none', eyeType: 'wide', palette: PALETTES[7],
   },
   'Big Brain': {
     name: 'Big Brain',
+    torso: 'classic', arms: 'noodle', legs: 'spring', feet: 'sneakers', outfit: 'alien',
     bodyType: 'bighead', headShape: 'round', hat: 'tophat',
-    eyeType: 'round', palette: PALETTES[6],
+    accessory: 'bowtie', eyeType: 'round', palette: PALETTES[6],
   },
   'The Fancy': {
     name: 'The Fancy',
+    torso: 'classic', arms: 'mitt', legs: 'tube', feet: 'sneakers', outfit: 'mascot',
     bodyType: 'normal', headShape: 'oval', hat: 'tophat',
-    eyeType: 'round', palette: PALETTES[3],
+    accessory: 'bowtie', eyeType: 'round', palette: PALETTES[3],
   },
   'The Tiny': {
     name: 'The Tiny',
+    torso: 'wedge', arms: 'noodle', legs: 'spring', feet: 'flippers', outfit: 'frog',
     bodyType: 'tiny', headShape: 'round', hat: 'crown',
-    eyeType: 'wide', palette: PALETTES[4],
+    accessory: 'fanny', eyeType: 'wide', palette: PALETTES[4],
   },
   'The Bot': {
     name: 'The Bot',
+    torso: 'barrel', arms: 'robot', legs: 'tube', feet: 'boots', outfit: 'alien',
     bodyType: 'bulky', headShape: 'square', hat: 'antenna',
-    eyeType: 'angry', palette: PALETTES[1],
+    accessory: 'spikes', eyeType: 'angry', palette: PALETTES[1],
   },
 }
 
@@ -102,14 +122,26 @@ export function randomName() {
 
 export function randomBuild(): CharacterBuild {
   const bodyTypes: BodyType[]  = ['normal','blob','tower','stubby','bulky','tiny','bighead']
+  const torsos: TorsoType[]    = ['classic', 'barrel', 'wedge', 'pear']
+  const arms: ArmType[]        = ['noodle', 'mitt', 'chunky', 'robot']
+  const legs: LegType[]        = ['tube', 'stomp', 'spring', 'peg']
+  const feet: FeetType[]       = ['sneakers', 'boots', 'flippers', 'hooves']
+  const outfits: OutfitType[]  = ['none', 'wrestler', 'plumber', 'alien', 'frog', 'mascot']
   const headShapes: HeadShape[] = ['round','square','oval']
   const hats: HatType[]         = ['none','tophat','crown','antenna','helmet']
+  const accessories: AccessoryType[] = ['none', 'cape', 'fanny', 'floaty', 'spikes', 'bowtie']
   const eyes: EyeType[]         = ['round','angry','wide','dot']
   return {
     name:      randomName(),
     bodyType:  bodyTypes[Math.floor(Math.random() * bodyTypes.length)],
+    torso:     torsos[Math.floor(Math.random() * torsos.length)],
+    arms:      arms[Math.floor(Math.random() * arms.length)],
+    legs:      legs[Math.floor(Math.random() * legs.length)],
+    feet:      feet[Math.floor(Math.random() * feet.length)],
+    outfit:    outfits[Math.floor(Math.random() * outfits.length)],
     headShape: headShapes[Math.floor(Math.random() * headShapes.length)],
     hat:       hats[Math.floor(Math.random() * hats.length)],
+    accessory: accessories[Math.floor(Math.random() * accessories.length)],
     eyeType:   eyes[Math.floor(Math.random() * eyes.length)],
     palette:   PALETTES[Math.floor(Math.random() * PALETTES.length)],
   }
