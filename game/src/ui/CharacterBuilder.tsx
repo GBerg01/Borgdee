@@ -1,5 +1,6 @@
 import { Suspense, useState, useRef, useEffect } from 'react'
 import { Canvas } from '@react-three/fiber'
+import { OrbitControls } from '@react-three/drei'
 import CharacterMesh from '../game/CharacterMesh'
 import {
   useCharacterStore,
@@ -22,6 +23,15 @@ const TABS: { id: Tab; icon: string; label: string }[] = [
 function PreviewScene({ build }: { build: ReturnType<typeof useCharacterStore>['build'] }) {
   return (
     <>
+      {/* Camera aimed at mid-character height */}
+      <OrbitControls
+        enableZoom={false}
+        enablePan={false}
+        target={[0, 1.1, 0]}
+        minPolarAngle={Math.PI * 0.25}
+        maxPolarAngle={Math.PI * 0.6}
+      />
+
       <ambientLight intensity={0.9} />
       <directionalLight position={[4, 8, 5]} intensity={1.5} castShadow />
       <pointLight position={[-3, 4, -3]} intensity={0.7} color="#aa66ff" />
@@ -215,7 +225,7 @@ export default function CharacterBuilder({ onPlay, onBack }: Props) {
         {canvasH > 0 && (
           <Canvas
             style={{ width:'100%', height:`${canvasH}px`, display:'block' }}
-            camera={{ position:[0, 2.2, 4.8], fov:40, near:0.1, far:100 }}
+            camera={{ position:[0, 1.8, 4.2], fov:42, near:0.1, far:100 }}
             gl={{ antialias:true }}
             shadows
           >
