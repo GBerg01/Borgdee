@@ -148,6 +148,94 @@ REPLAY LOOP
 
 ## 5. Gameplay Design Breakdown
 
+### Claude Implementation Prompt Insert — Step-by-Step Gameplay Mechanics for Disappearing-Tile Survival Mode
+
+Use this section as the canonical implementation checklist in Claude build documents so generated systems stay aligned across gameplay code, UI, and menu flow.
+
+#### 1. Arena Initialization
+- Generate the tile grid for the map.
+- Each tile has a state machine:
+  - `Intact` → `Cracking` → `Disappearing` → `Gone`
+- Set visual and audio feedback for each state:
+  - `Cracking`: tile shakes or glows, warning sound plays
+  - `Disappearing`: tile fades or flashes
+  - `Gone`: tile becomes non-collidable
+
+#### 2. Player Spawn
+- Spawn all players at starting positions.
+- Apply identical physics body / collision capsule for all players.
+- Apply base movement stats (speed, jump, dive, grab) identical for all.
+- Attach cosmetic body / modular parts, ensuring visual differences do not affect physics.
+
+#### 3. Tile Triggering
+- When a player steps on a tile:
+  1. Tile enters `Cracking` state immediately.
+  2. Start a delay timer (configurable, e.g., 0.5-1 second).
+  3. Tile enters `Disappearing` state, continues countdown.
+  4. Tile enters `Gone` state — non-solid, player standing falls.
+- Optionally include randomized tile decay times to increase unpredictability.
+
+#### 4. Player Movement
+- Maintain:
+  - Same collision capsule for all players
+  - Same grab range
+  - Same jump height / dive distance
+- Animate visual body separately — allow tall, short, wide, stubby, fat-looking variations.
+
+#### 5. Grabbing / Diving Mechanics
+- Allow players to grab edges or other players for brief movement advantage.
+- Dive extends forward momentum but cannot exceed base movement rules.
+
+#### 6. Tile Layering
+- Single-layer MVP is fine.
+- Optional multi-layer variant:
+  - Upper layer disappears first, exposing lower layer
+  - Forces vertical movement decisions
+  - Adds visual tension
+
+#### 7. Round Termination
+- Monitor player positions:
+  - Players falling through `Gone` tiles are eliminated
+  - Optional respawn if using multi-phase rounds
+- Last player remaining wins.
+
+#### 8. HUD / Feedback
+- Show:
+  - Player elimination count / remaining
+  - Map overview
+  - Tile state indicators (optional mini-map or visual effect)
+- Include audio cues synchronized with tile decay.
+
+#### 9. Menu Flow
+1. Home Screen → Play
+2. Mode Selection → “Disappearing Tile Survival”
+3. Map Preview → Show approximate arena layout & tile type
+4. Character Build → Modular cosmetic body builder
+5. Ready → Lobby → Start Round
+6. Round Play → Live update HUD
+7. Results → Post-match summary → Next Round / Return to Menu
+
+#### 10. Level / Tile Variation
+- Implement different visual styles or themes for arenas.
+- Tile patterns can vary:
+  - Grid
+  - Randomized gaps
+  - Moving platforms
+  - Slopes / ramps
+
+#### 11. Replayability & Social
+- Each round is short (e.g., 1-3 minutes).
+- Randomized tile behavior for replayability.
+- Social / spectator mode can show live leaderboard or remaining players.
+
+#### 12. Notes for Claude Implementation
+- Generate modular placeholder assets for tiles if real assets do not exist.
+- Include placeholder visual effects for cracking, disappearing, and gone states.
+- Ensure tile state machine is fully wired to gameplay logic and UI feedback.
+- Character builder visual body must update live but keep gameplay physics uniform.
+
+> Integrate this step-by-step into Claude prompts under “Gameplay Design Breakdown” so AI outputs include both round logic and menu/UX flows.
+
 ### Movement Model
 
 | Parameter | Value | Feel Goal |
